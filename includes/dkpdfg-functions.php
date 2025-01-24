@@ -183,6 +183,8 @@ function dkpdfg_output_pdf() {
 		$mpdf->Output( 'dk-pdf-generator.pdf', 'D' );
 
 	}
+
+	die;
 }
 
 /**
