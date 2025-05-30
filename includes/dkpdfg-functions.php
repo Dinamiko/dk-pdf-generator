@@ -59,6 +59,11 @@ function dkpdfg_output_pdf() {
 
 	set_query_var( 'pdf', 'pdf' );
 
+	$content = '';
+
+	$pdfContent = dkpdfg_get_template( 'dkpdfg-index' );
+	$content .= $pdfContent;
+
 	// include mPDF library from DK PDF
 	if ( file_exists( ABSPATH . '/wp-content/plugins/dk-pdf/includes/mpdf60/mpdf.php' ) ) {
 
@@ -142,14 +147,16 @@ function dkpdfg_output_pdf() {
 	if ( $dkpdf_show_cover == 'on' ) {
 		$pdf_cover = dkpdfg_get_template( 'dkpdfg-cover' );
 		$mpdf->WriteHTML( $pdf_cover );
+		$content .= $pdf_cover;
 	}
 
 	// write TOC
 	if ( $dkpdf_show_toc == 'on' ) {
 
 		$toc_title = get_option( 'dkpdfg_toc_title', 'Table of contents' );
-
-		$mpdf->WriteHTML( '<tocpagebreak toc-preHTML="&lt;h2&gt;' . $toc_title . '&lt;/h2&gt;"  paging="on" links="on" resetpagenum="1" toc-odd-footer-value="-1" toc-odd-header-value="-1" />' );
+		$toc = '<tocpagebreak toc-preHTML="&lt;h2&gt;' . $toc_title . '&lt;/h2&gt;"  paging="on" links="on" resetpagenum="1" toc-odd-footer-value="-1" toc-odd-header-value="-1" />';
+		$mpdf->WriteHTML( $toc );
+		$content .= $toc;
 		$mpdf->h2toc       = array( 'H1' => 0 );
 		$mpdf->h2bookmarks = array( 'H1' => 0 );
 
@@ -160,29 +167,55 @@ function dkpdfg_output_pdf() {
 	// header
 	$pdf_header_html = dkpdf_get_template( 'dkpdf-header' );
 	$mpdf->SetHTMLHeader( $pdf_header_html, 'O', true );
+	$content .= $pdf_header_html;
 
 	// footer
 	$pdf_footer_html = dkpdf_get_template( 'dkpdf-footer' );
 	$mpdf->SetHTMLFooter( $pdf_footer_html );
+	$content .= $pdf_footer_html;
 
-	// write content
-	$mpdf->WriteHTML( dkpdfg_get_template( 'dkpdfg-index' ) );
-
-	// output PDF
-	//$mpdf->Output();
-	//$mpdf->Output( 'dk-pdf-generator.pdf', 'D' );
+	$checksum = md5( $content);
+	// check if the PDF is already generated
+	$dkpdf_mpdf_temp_dir = apply_filters('dkpdf_mpdf_temp_dir',realpath( __DIR__ . '/..' ) . '/tmp');
+	$dkpdfg_temp_file = $dkpdf_mpdf_temp_dir . '/cache_' . $checksum . '.pdf';
 
 	$cover_title = get_option( 'dkpdfg_cover_title', '' );
 
+	// dest filename
 	if ( $cover_title != '' ) {
-
-		$mpdf->Output( $cover_title . '.pdf', 'D' );
-
+		$filename = $cover_title . '.pdf';
 	} else {
+		$filename = 'dk-pdf-generator.pdf';
+	}
 
-		$mpdf->Output( 'dk-pdf-generator.pdf', 'D' );
+	// purge old PDFs in cache
+	$dkpdfg_cache_files = glob( $dkpdf_mpdf_temp_dir . '/cache_*.pdf' );
+	foreach ( $dkpdfg_cache_files as $file ) {
+		if ( filemtime( $file ) < time() - 60 * 60 * 24 * 30 ) { // 30 days
+			unlink( $file );
+		}
+	}
+
+	if ( !file_exists( $dkpdfg_temp_file ) ) {
+
+		// write content
+		$mpdf->WriteHTML( $pdfContent );
+
+		$mpdf->Output( $dkpdfg_temp_file, 'F' );
 
 	}
+
+	// if the file exists, output it
+	header( 'Content-Type: application/pdf' );
+	header( 'Content-Disposition: attachment; filename="' . $filename . '"' );
+	header( 'Content-Length: ' . filesize( $dkpdfg_temp_file ) );
+	if (in_array('mod_xsendfile', apache_get_modules())) {
+		header( 'X-Sendfile: ' . realpath($dkpdfg_temp_file) );
+	} else {
+		// fallback to regular download
+		readfile( $dkpdfg_temp_file );
+	}
+	exit;
 }
 
 /**
