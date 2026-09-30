@@ -183,6 +183,9 @@ function dkpdfg_output_pdf() {
 		$mpdf->Output( 'dk-pdf-generator.pdf', 'D' );
 
 	}
+
+	// stop here, otherwise DK PDF >= 2.1 handles the 'pdf' query var afterwards
+	exit;
 }
 
 /**
