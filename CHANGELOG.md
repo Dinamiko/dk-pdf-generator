@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.6.1
+- Fix fatal error "Call to undefined function dkpdf_get_template()" with DK PDF 2.1+.
+
 ## 1.6.0
 - Add support for DK PDF 1.9.7+ and PHP 8+.
 

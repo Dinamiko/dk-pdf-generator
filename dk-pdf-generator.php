@@ -1,7 +1,7 @@
 <?php
 /*
  * Plugin Name: DK PDF Generator
- * Version: 1.6.0
+ * Version: 1.6.1
  * Description: Create PDF documents with your selected posts, pages and custom post types.
  * Author: Emili Castells
  * Requires PHP: 8.0
@@ -74,6 +74,11 @@ if ( ! class_exists( 'DKPDFG' ) ) {
 
 			// css / js
 			require_once DKPDFG_PLUGIN_DIR . 'includes/dkpdfg-load-js-css.php';
+
+			// DK PDF >= 2.1 compatibility (legacy dkpdf_* functions), loaded after DK PDF has booted
+			add_action( 'plugins_loaded', function () {
+				require_once DKPDFG_PLUGIN_DIR . 'includes/dkpdfg-compat.php';
+			}, 20 );
 
 			// functions
 			require_once DKPDFG_PLUGIN_DIR . 'includes/dkpdfg-functions.php';
